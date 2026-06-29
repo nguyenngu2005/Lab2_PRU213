@@ -18,6 +18,8 @@ public class Driver : MonoBehaviour
     [SerializeField] float groundedLeanMultiplier = 0.75f;
     [SerializeField] float airFlipMultiplier = 3.05f;
     [SerializeField] float crashSlowMultiplier = 0.35f;
+    [SerializeField] float crashSlowDuration = 0.85f;
+    [SerializeField] float crashPushbackImpulse = 4f;
 
     [Header("Boost Energy")]
     [SerializeField] float boostEnergyMax = 1f;
@@ -41,6 +43,8 @@ public class Driver : MonoBehaviour
     float temporaryBoostMultiplier = 1f;
     float boostTimer;
     float boostEnergy = 1f;
+    float slowEffectTimer;
+    float activeSlowMultiplier = 1f;
     float outOfBoundsMinX;
     float outOfBoundsMaxX;
     float outOfBoundsMinY;
@@ -78,6 +82,7 @@ public class Driver : MonoBehaviour
         }
 
         UpdateBoostTimer();
+        UpdateSlowEffectTimer();
         UpdateManualBoost();
         CheckOutOfBounds();
         UpdateTrickTracking();
@@ -122,6 +127,7 @@ public class Driver : MonoBehaviour
         }
 
         targetSurfaceSpeed *= temporaryBoostMultiplier;
+        targetSurfaceSpeed *= activeSlowMultiplier;
 
         if (activeSurfaceEffector != null)
         {
@@ -183,7 +189,7 @@ public class Driver : MonoBehaviour
 
     void ClampSpeed(bool boosting)
     {
-        float allowedSpeed = (boosting ? Mathf.Max(maxSpeed, boostSpeed) : maxSpeed) * temporaryBoostMultiplier;
+        float allowedSpeed = (boosting ? Mathf.Max(maxSpeed, boostSpeed) : maxSpeed) * temporaryBoostMultiplier * activeSlowMultiplier;
         if (rb.linearVelocity.magnitude > allowedSpeed)
         {
             rb.linearVelocity = rb.linearVelocity.normalized * allowedSpeed;
@@ -202,6 +208,21 @@ public class Driver : MonoBehaviour
         if (boostTimer <= 0f)
         {
             temporaryBoostMultiplier = 1f;
+        }
+    }
+
+    void UpdateSlowEffectTimer()
+    {
+        if (slowEffectTimer <= 0f)
+        {
+            activeSlowMultiplier = 1f;
+            return;
+        }
+
+        slowEffectTimer -= Time.deltaTime;
+        if (slowEffectTimer <= 0f)
+        {
+            activeSlowMultiplier = 1f;
         }
     }
 
@@ -299,13 +320,15 @@ public class Driver : MonoBehaviour
 
     public void SlowDownAfterCrash(Vector2 impactPoint)
     {
+        activeSlowMultiplier = Mathf.Min(activeSlowMultiplier, crashSlowMultiplier);
+        slowEffectTimer = Mathf.Max(slowEffectTimer, crashSlowDuration);
         rb.linearVelocity *= crashSlowMultiplier;
         rb.angularVelocity *= crashSlowMultiplier;
 
         Vector2 away = ((Vector2)transform.position - impactPoint).normalized;
         if (away.sqrMagnitude > 0.01f)
         {
-            rb.AddForce(away * 4f, ForceMode2D.Impulse);
+            rb.AddForce(away * crashPushbackImpulse, ForceMode2D.Impulse);
         }
     }
 
@@ -317,6 +340,8 @@ public class Driver : MonoBehaviour
         rb.angularVelocity = 0f;
         temporaryBoostMultiplier = 1f;
         boostTimer = 0f;
+        slowEffectTimer = 0f;
+        activeSlowMultiplier = 1f;
         boostEnergy = boostEnergyMax;
         manualBoostActive = false;
         airTime = 0f;

@@ -48,6 +48,7 @@ Updated: 2026-06-20
 - Added scene-based background music: `anti` for Menu, `maksym` for gameplay levels, and `kawaiiwork` for EndGame.
 - Added `Level2` and `Level3` scenes based on `Level1`.
 - Added campaign scene flow: Menu -> Level1 -> Level2 -> Level3 -> EndGame, with score and best combo accumulated across levels.
+- Made rock bumps keep the same slowdown feeling as crashes by applying a short recovery slow to player speed and SurfaceEffector movement without removing lives.
 
 ## Current Controls
 
